@@ -28,6 +28,8 @@ pub enum DescriptorType {
 
 #[derive(Debug, Clone)]
 pub struct SetLayout {
+    pub name: String,
+    pub set: u32,
     pub bindings: Vec<Binding>,
 }
 

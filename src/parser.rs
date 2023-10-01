@@ -3,7 +3,7 @@ use syn::{
     parse::{Parse, ParseStream},
 };
 
-use crate::{Binding, DescriptorType, ImageFormat, SetLayout, ShaderStages};
+use crate::{Binding, DescriptorType, ImageFormat, PlayoutModule, SetLayout, ShaderStages};
 
 impl Parse for DescriptorType {
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -174,6 +174,8 @@ impl Parse for Binding {
 
 impl Parse for SetLayout {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let _struct = input.parse::<syn::Token![struct]>()?;
+        let name = input.parse::<syn::Ident>()?;
         let lookahead = input.lookahead1();
         if lookahead.peek(syn::token::Brace) {
             let content;
@@ -212,18 +214,66 @@ impl Parse for SetLayout {
                 let _comma: syn::Token![,] = content.parse()?;
                 current_binding += 1;
             }
-            Ok(SetLayout { bindings })
+            Ok(SetLayout {
+                bindings,
+                name: name.to_string(),
+                set: 0,
+            })
         } else {
             Err(lookahead.error())
         }
     }
 }
 
-impl TryFrom<&str> for SetLayout {
+impl Parse for PlayoutModule {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut module = PlayoutModule {
+            descriptor_sets: Vec::new(),
+        };
+        let mut current_set_id: u32 = 0;
+        loop {
+            if input.is_empty() {
+                break;
+            }
+
+            let mut is_descriptor_set = None;
+            if input.peek(syn::Token![#]) {
+                let _pound: syn::Token![#] = input.parse()?;
+                let content;
+                let _bracket: syn::token::Bracket = syn::bracketed!(content in input);
+                let ident = content.parse::<syn::Ident>()?;
+                if ident != "set" {
+                    return Err(syn::Error::new(ident.span(), "unknown attribute"));
+                }
+                if content.peek(syn::Token![=]) {
+                    let _eq: syn::Token![=] = content.parse()?;
+                    current_set_id = content.parse::<syn::LitInt>()?.base10_parse()?;
+                }
+                is_descriptor_set = Some(current_set_id);
+                current_set_id += 1;
+            }
+            if input.is_empty() {
+                break;
+            }
+            if input.peek(syn::Token![struct]) {
+                if let Some(set_id) = is_descriptor_set {
+                    let mut set_layout = input.parse::<SetLayout>()?;
+                    set_layout.set = set_id;
+                    module.descriptor_sets.push(set_layout);
+                } else {
+                    todo!()
+                }
+            }
+        }
+        Ok(module)
+    }
+}
+
+impl TryFrom<&str> for PlayoutModule {
     type Error = syn::Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let tokens = syn::parse_str::<SetLayout>(value)?;
+        let tokens = syn::parse_str::<PlayoutModule>(value)?;
         Ok(tokens)
     }
 }

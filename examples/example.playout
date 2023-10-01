@@ -1,4 +1,5 @@
-{
+#[set = 3]
+struct StandardLayout {
     #![stage(MISS | CLOSEST_HIT | RAYGEN)]
     img_illuminance: StorageImage<RGBA16_Float>,
 

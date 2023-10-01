@@ -96,9 +96,7 @@ impl crate::Binding {
             crate::DescriptorType::StorageImage { .. } => {
                 glsl::syntax::TypeSpecifierNonArray::Image2D
             }
-            crate::DescriptorType::SampledImage => {
-                glsl::syntax::TypeSpecifierNonArray::Sampler2D
-            }
+            crate::DescriptorType::SampledImage => glsl::syntax::TypeSpecifierNonArray::Sampler2D,
             crate::DescriptorType::AccelerationStructure => {
                 glsl::syntax::TypeSpecifierNonArray::TypeName("accelerationStructureEXT".into())
             }
@@ -136,12 +134,18 @@ impl crate::Binding {
 }
 
 impl crate::SetLayout {
-    pub fn to_declarations(
-        &self,
-        set_id: u32,
-    ) -> impl ExactSizeIterator<Item = glsl::syntax::Declaration> + '_ {
+    pub fn to_declarations(&self) -> impl ExactSizeIterator<Item = glsl::syntax::Declaration> + '_ {
+        let set_id = self.set;
         self.bindings
             .iter()
             .map(move |binding| binding.to_declaration(set_id))
+    }
+}
+
+impl crate::PlayoutModule {
+    pub fn to_declarations(&self) -> impl Iterator<Item = glsl::syntax::Declaration> + '_ {
+        self.descriptor_sets
+            .iter()
+            .flat_map(|set| set.to_declarations())
     }
 }
