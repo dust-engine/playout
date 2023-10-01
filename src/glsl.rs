@@ -11,7 +11,7 @@ impl crate::ImageFormat {
             crate::ImageFormat::R32_Float => "r32f",
             crate::ImageFormat::R16_Float => "r16f",
             crate::ImageFormat::RGBA16_UNorm => "rgba16",
-            crate::ImageFormat::RGB10A2_UNorm => "rgb10a2",
+            crate::ImageFormat::RGB10A2_UNorm => "rgb10_a2",
             crate::ImageFormat::RBGA8_UNorm => "rgba8",
             crate::ImageFormat::RG16_UNorm => "rg16",
             crate::ImageFormat::RG8_UNorm => "rg8",
@@ -93,8 +93,14 @@ impl crate::Binding {
 
         let type_specifier = match self.descriptor_type {
             crate::DescriptorType::Sampler => todo!(),
-            crate::DescriptorType::StorageImage { .. } => {
-                glsl::syntax::TypeSpecifierNonArray::Image2D
+            crate::DescriptorType::StorageImage { format } => {
+                use crate::ImageFormatDataMode::*;
+                match format.data_mode() {
+                    Float | UNorm | SNorm => 
+                    glsl::syntax::TypeSpecifierNonArray::Image2D,
+                    crate::ImageFormatDataMode::SInt => glsl::syntax::TypeSpecifierNonArray::IImage2D,
+                    crate::ImageFormatDataMode::UInt => glsl::syntax::TypeSpecifierNonArray::UImage2D,
+                }
             }
             crate::DescriptorType::SampledImage => glsl::syntax::TypeSpecifierNonArray::Sampler2D,
             crate::DescriptorType::AccelerationStructure => {

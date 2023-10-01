@@ -3,7 +3,10 @@ use syn::{
     parse::{Parse, ParseStream},
 };
 
-use crate::{Binding, DescriptorType, ImageFormat, PlayoutModule, SetLayout, ShaderStages};
+use crate::{
+    Binding, DataStruct, DescriptorType, Field, ImageFormat, PlayoutModule, PrimitiveType,
+    PrimitiveTypeSingle, SetLayout, ShaderStages, Type,
+};
 
 impl Parse for DescriptorType {
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -227,9 +230,7 @@ impl Parse for SetLayout {
 
 impl Parse for PlayoutModule {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let mut module = PlayoutModule {
-            descriptor_sets: Vec::new(),
-        };
+        let mut module = PlayoutModule::default();
         let mut current_set_id: u32 = 0;
         loop {
             if input.is_empty() {
@@ -261,11 +262,167 @@ impl Parse for PlayoutModule {
                     set_layout.set = set_id;
                     module.descriptor_sets.push(set_layout);
                 } else {
-                    todo!()
+                    let data_struct = input.parse::<DataStruct>()?;
+                    module.data_structs.push(data_struct);
                 }
             }
         }
         Ok(module)
+    }
+}
+
+impl Parse for PrimitiveTypeSingle {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let ident = input.parse::<syn::Ident>()?;
+        match ident.to_string().as_str() {
+            "u8" => Ok(Self::U8),
+            "u16" => Ok(Self::U16),
+            "u32" => Ok(Self::U32),
+            "u64" => Ok(Self::U64),
+            "i8" => Ok(Self::I8),
+            "i16" => Ok(Self::I16),
+            "i32" => Ok(Self::I32),
+            "i64" => Ok(Self::I64),
+            "bool" => Ok(Self::Bool),
+            "f16" => Ok(Self::F16),
+            "f32" => Ok(Self::F32),
+            "f64" => Ok(Self::F64),
+            _ => Err(syn::Error::new(ident.span(), "Invalid primitive type")),
+        }
+    }
+}
+
+impl Parse for PrimitiveType {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let old_input = input.fork();
+
+        let ident = input.parse::<syn::Ident>()?;
+        let mut result = match ident.to_string().as_str() {
+            "Vec4" => Self::Vec {
+                ty: PrimitiveTypeSingle::F32,
+                length: 4,
+            },
+            "Vec3" => Self::Vec {
+                ty: PrimitiveTypeSingle::F32,
+                length: 3,
+            },
+            "Vec2" => Self::Vec {
+                ty: PrimitiveTypeSingle::F32,
+                length: 2,
+            },
+            "UVec4" => Self::Vec {
+                ty: PrimitiveTypeSingle::U32,
+                length: 4,
+            }, // Shorthands
+            "UVec3" => Self::Vec {
+                ty: PrimitiveTypeSingle::U32,
+                length: 3,
+            },
+            "UVec2" => Self::Vec {
+                ty: PrimitiveTypeSingle::U32,
+                length: 2,
+            },
+            "IVec4" => Self::Vec {
+                ty: PrimitiveTypeSingle::I32,
+                length: 4,
+            },
+            "IVec3" => Self::Vec {
+                ty: PrimitiveTypeSingle::I32,
+                length: 3,
+            },
+            "IVec2" => Self::Vec {
+                ty: PrimitiveTypeSingle::I32,
+                length: 2,
+            },
+            "Mat4" => Self::Mat {
+                ty: PrimitiveTypeSingle::I32,
+                rows: 4,
+                columns: 4,
+            },
+            "Mat3" => Self::Mat {
+                ty: PrimitiveTypeSingle::I32,
+                rows: 3,
+                columns: 3,
+            },
+            "Mat2" => Self::Mat {
+                ty: PrimitiveTypeSingle::I32,
+                rows: 2,
+                columns: 2,
+            },
+            _ => Self::Single(old_input.parse()?),
+        };
+        if input.peek(syn::Token![<]) {
+            // Attempt to resolve generic arg
+            if let Self::Vec { ty, .. } = &mut result {
+                if matches!(ty, PrimitiveTypeSingle::F32) {
+                    let _left = input.parse::<syn::Token![<]>()?;
+                    *ty = input.parse()?;
+                    let _right = input.parse::<syn::Token![>]>()?;
+                } else {
+                    return Err(syn::Error::new(
+                        ident.span(),
+                        "Generic type cannot be used on this shorthand type",
+                    ));
+                }
+            } else {
+                return Err(syn::Error::new(
+                    ident.span(),
+                    "Generic type cannot be used on primitive types",
+                ));
+            }
+        }
+        Ok(result)
+    }
+}
+
+impl Parse for Type {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        if input.peek(syn::token::Bracket) {
+            let ty: Type = input.parse()?;
+            if input.peek(syn::Token![;]) {
+                let _semicolon: syn::Token![;] = input.parse()?;
+                let length = input.parse::<syn::LitInt>()?;
+                Ok(Type::Array {
+                    ty: Box::new(ty),
+                    size: length.base10_parse()?,
+                })
+            } else {
+                Ok(Type::Slice { ty: Box::new(ty) })
+            }
+        } else {
+            let ty: PrimitiveType = input.parse()?;
+            Ok(Type::Primitive(ty))
+        }
+    }
+}
+
+impl Parse for Field {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let ident: syn::Ident = input.parse()?;
+        let _colon: syn::Token![:] = input.parse()?;
+        let ty: Type = input.parse()?;
+        Ok(Self {
+            ident: Some(ident.to_string()),
+            ty,
+        })
+    }
+}
+
+impl Parse for DataStruct {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let _struct = input.parse::<syn::Token![struct]>()?;
+        let name = input.parse::<syn::Ident>()?;
+        if input.peek(syn::token::Brace) {
+            let content;
+            let _paren: syn::token::Brace = syn::braced!(content in input);
+            let fields = content.parse_terminated(Field::parse, syn::Token![,])?;
+            Ok(Self {
+                ident: name.to_string(),
+                fields,
+            })
+        } else {
+            unimplemented!()
+        }
     }
 }
 
