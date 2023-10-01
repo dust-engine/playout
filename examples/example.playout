@@ -1,0 +1,18 @@
+{
+    #![stage(MISS | CLOSEST_HIT | RAYGEN)]
+    img_illuminance: StorageImage<RGBA16_Float>,
+
+    img_illuminance_denoised: StorageImage<RGBA16_Float>,
+    
+    img_albedo: StorageImage<RGB10A2_UNorm>,
+    img_normal: StorageImage<RGB10A2_UNorm>,
+    img_depth: StorageImage<R32_Float>,
+    img_motion: StorageImage<RGBA16_Float>,
+    img_voxel_id: StorageImage<R32_UInt>,
+
+    blue_noise: [SampledImage; 6],
+
+
+    #[binding = 14]
+    acceleration_structure: AccelerationStructure,
+}
