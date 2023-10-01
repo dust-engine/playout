@@ -108,9 +108,9 @@ fn parse_binding_attribute(input: ParseStream) -> syn::Result<u32> {
     if ident == "binding" {
         let _eq = content.parse::<syn::Token![=]>()?;
         let binding_literal: syn::LitInt = content.parse::<syn::LitInt>()?;
-        return binding_literal.base10_parse();
+        binding_literal.base10_parse()
     } else {
-        return Err(syn::Error::new_spanned(ident, "unknown attribute"));
+        Err(syn::Error::new(ident.span(), "unknown attribute"))
     }
 }
 
@@ -125,9 +125,9 @@ fn parse_shader_stage_attribute(input: ParseStream) -> syn::Result<ShaderStages>
     if ident == "stage" {
         let inside;
         let _paren = syn::parenthesized!(inside in content);
-        return inside.parse::<ShaderStages>();
+        inside.parse::<ShaderStages>()
     } else {
-        return Err(syn::Error::new_spanned(ident, "unknown attribute"));
+        Err(syn::Error::new(ident.span(), "unknown attribute"))
     }
 }
 
