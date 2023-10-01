@@ -1,6 +1,8 @@
 pub mod parser;
 mod types;
 
+use std::collections::HashMap;
+
 pub use types::*;
 
 mod glsl;
@@ -8,5 +10,5 @@ mod glsl;
 #[derive(Default)]
 pub struct PlayoutModule {
     pub descriptor_sets: Vec<SetLayout>,
-    pub data_structs: Vec<DataStruct>,
+    pub data_structs: HashMap<String, DataStruct>,
 }

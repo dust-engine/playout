@@ -1,4 +1,6 @@
-use syn::punctuated::Punctuated;
+use std::fmt::Debug;
+
+use syn::{punctuated::Punctuated, Path};
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy)]
@@ -20,22 +22,29 @@ bitflags::bitflags! {
     }
 }
 
-#[derive(Debug, Clone)]
 pub enum DescriptorType {
     Sampler,
     StorageImage { format: ImageFormat },
     SampledImage,
+    UniformBuffer { path: Path },
     AccelerationStructure,
 }
 
-#[derive(Debug, Clone)]
+impl Debug for DescriptorType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use DescriptorType::*;
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
 pub struct SetLayout {
     pub name: String,
     pub set: u32,
     pub bindings: Vec<Binding>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Binding {
     pub ident: String,
     pub binding: u32,
@@ -143,6 +152,22 @@ pub enum Type {
     Primitive(PrimitiveType),
     Slice { ty: Box<Type> },
     //Path, for nested structs
+}
+
+impl Type {
+    pub fn primitive_type(&self) -> Option<&PrimitiveType> {
+        match self {
+            Type::Primitive(ty) => Some(ty),
+            Type::Array { ty, .. } => match ty.as_ref() {
+                Type::Primitive(ty) => Some(ty),
+                _ => None,
+            },
+            Type::Slice { ty } => match ty.as_ref() {
+                Type::Primitive(ty) => Some(ty),
+                _ => None,
+            },
+        }
+    }
 }
 
 pub enum PrimitiveTypeSingle {

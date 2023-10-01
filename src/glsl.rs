@@ -1,4 +1,6 @@
-use glsl::syntax::NonEmpty;
+use glsl::syntax::{ArrayedIdentifier, NonEmpty};
+
+use crate::PlayoutModule;
 
 impl crate::ImageFormat {
     pub fn to_layout_qualifier(&self) -> &'static str {
@@ -47,7 +49,7 @@ impl crate::ImageFormat {
 }
 
 impl crate::Binding {
-    pub fn to_declaration(&self, set_id: u32) -> glsl::syntax::Declaration {
+    pub fn to_declaration(&self, module: &PlayoutModule, set_id: u32) -> glsl::syntax::Declaration {
         let mut layout_qualifier = glsl::syntax::LayoutQualifier {
             ids: NonEmpty::from_non_empty_iter([
                 glsl::syntax::LayoutQualifierSpec::Identifier(
@@ -82,7 +84,8 @@ impl crate::Binding {
             crate::DescriptorType::Sampler => todo!(),
             crate::DescriptorType::StorageImage { .. }
             | crate::DescriptorType::SampledImage
-            | crate::DescriptorType::AccelerationStructure => {
+            | crate::DescriptorType::AccelerationStructure
+            | crate::DescriptorType::UniformBuffer { .. } => {
                 type_qualifier
                     .qualifiers
                     .push(glsl::syntax::TypeQualifierSpec::Storage(
@@ -91,20 +94,35 @@ impl crate::Binding {
             }
         }
 
-        let type_specifier = match self.descriptor_type {
+        let type_specifier = match &self.descriptor_type {
             crate::DescriptorType::Sampler => todo!(),
             crate::DescriptorType::StorageImage { format } => {
                 use crate::ImageFormatDataMode::*;
                 match format.data_mode() {
-                    Float | UNorm | SNorm => 
-                    glsl::syntax::TypeSpecifierNonArray::Image2D,
-                    crate::ImageFormatDataMode::SInt => glsl::syntax::TypeSpecifierNonArray::IImage2D,
-                    crate::ImageFormatDataMode::UInt => glsl::syntax::TypeSpecifierNonArray::UImage2D,
+                    Float | UNorm | SNorm => glsl::syntax::TypeSpecifierNonArray::Image2D,
+                    crate::ImageFormatDataMode::SInt => {
+                        glsl::syntax::TypeSpecifierNonArray::IImage2D
+                    }
+                    crate::ImageFormatDataMode::UInt => {
+                        glsl::syntax::TypeSpecifierNonArray::UImage2D
+                    }
                 }
             }
             crate::DescriptorType::SampledImage => glsl::syntax::TypeSpecifierNonArray::Sampler2D,
             crate::DescriptorType::AccelerationStructure => {
                 glsl::syntax::TypeSpecifierNonArray::TypeName("accelerationStructureEXT".into())
+            }
+            crate::DescriptorType::UniformBuffer { path } => {
+                let struct_def = module
+                    .data_structs
+                    .get(&path.get_ident().unwrap().to_string())
+                    .unwrap();
+                let fields = struct_def.fields.iter().map(|field| field.to_field());
+
+                glsl::syntax::TypeSpecifierNonArray::Struct(glsl::syntax::StructSpecifier {
+                    name: None,
+                    fields: NonEmpty::from_non_empty_iter(fields).unwrap(),
+                })
             }
         };
 
@@ -140,11 +158,14 @@ impl crate::Binding {
 }
 
 impl crate::SetLayout {
-    pub fn to_declarations(&self) -> impl ExactSizeIterator<Item = glsl::syntax::Declaration> + '_ {
+    pub fn to_declarations<'a>(
+        &'a self,
+        module: &'a PlayoutModule,
+    ) -> impl ExactSizeIterator<Item = glsl::syntax::Declaration> + 'a {
         let set_id = self.set;
         self.bindings
             .iter()
-            .map(move |binding| binding.to_declaration(set_id))
+            .map(move |binding| binding.to_declaration(module, set_id))
     }
 }
 
@@ -152,6 +173,115 @@ impl crate::PlayoutModule {
     pub fn to_declarations(&self) -> impl Iterator<Item = glsl::syntax::Declaration> + '_ {
         self.descriptor_sets
             .iter()
-            .flat_map(|set| set.to_declarations())
+            .flat_map(|set| set.to_declarations(self))
+    }
+}
+
+impl crate::Field {
+    pub fn to_field(&self) -> glsl::syntax::StructFieldSpecifier {
+        glsl::syntax::StructFieldSpecifier {
+            qualifier: None,
+            ty: glsl::syntax::TypeSpecifier {
+                ty: self.ty.primitive_type().unwrap().to_primitive_type(),
+                array_specifier: None,
+            },
+            identifiers: NonEmpty::from_non_empty_iter([glsl::syntax::ArrayedIdentifier {
+                ident: self.ident.as_ref().map(String::as_str).unwrap().into(),
+                array_spec: match &self.ty {
+                    crate::Type::Array { ty, size } => Some(glsl::syntax::ArraySpecifier {
+                        dimensions: NonEmpty::from_non_empty_iter([
+                            glsl::syntax::ArraySpecifierDimension::ExplicitlySized(Box::new(
+                                glsl::syntax::Expr::UIntConst(*size as u32),
+                            )),
+                        ])
+                        .unwrap(),
+                    }),
+                    crate::Type::Primitive(_) => None,
+                    crate::Type::Slice { ty } => Some(glsl::syntax::ArraySpecifier {
+                        dimensions: NonEmpty::from_non_empty_iter([
+                            glsl::syntax::ArraySpecifierDimension::Unsized,
+                        ])
+                        .unwrap(),
+                    }),
+                },
+            }])
+            .unwrap(),
+        }
+    }
+}
+
+impl crate::PrimitiveType {
+    pub fn to_primitive_type(&self) -> glsl::syntax::TypeSpecifierNonArray {
+        use glsl::syntax::TypeSpecifierNonArray::*;
+        match self {
+            crate::PrimitiveType::Single(ty) => match ty {
+                crate::PrimitiveTypeSingle::U8 => TypeName("uint8_t".into()),
+                crate::PrimitiveTypeSingle::U16 => TypeName("uint16_t".into()),
+                crate::PrimitiveTypeSingle::U32 => UInt,
+                crate::PrimitiveTypeSingle::U64 => TypeName("uint64_t".into()),
+                crate::PrimitiveTypeSingle::I8 => TypeName("int8_t".into()),
+                crate::PrimitiveTypeSingle::I16 => TypeName("int16_t".into()),
+                crate::PrimitiveTypeSingle::I32 => Int,
+                crate::PrimitiveTypeSingle::I64 => TypeName("int64_t".into()),
+                crate::PrimitiveTypeSingle::F16 => TypeName("float16_t".into()),
+                crate::PrimitiveTypeSingle::F32 => Float,
+                crate::PrimitiveTypeSingle::F64 => Double,
+                crate::PrimitiveTypeSingle::Bool => Bool,
+            },
+            crate::PrimitiveType::Vec { ty, length } => match (ty, length) {
+                (crate::PrimitiveTypeSingle::U8, 2) => TypeName("u8vec2".into()),
+                (crate::PrimitiveTypeSingle::U8, 3) => TypeName("u8vec3".into()),
+                (crate::PrimitiveTypeSingle::U8, 4) => TypeName("u8vec4".into()),
+                (crate::PrimitiveTypeSingle::U16, 2) => TypeName("u16vec2".into()),
+                (crate::PrimitiveTypeSingle::U16, 3) => TypeName("u16vec3".into()),
+                (crate::PrimitiveTypeSingle::U16, 4) => TypeName("u16vec4".into()),
+                (crate::PrimitiveTypeSingle::U32, 2) => UVec2,
+                (crate::PrimitiveTypeSingle::U32, 3) => UVec3,
+                (crate::PrimitiveTypeSingle::U32, 4) => UVec4,
+                (crate::PrimitiveTypeSingle::U64, 2) => TypeName("u64vec2".into()),
+                (crate::PrimitiveTypeSingle::U64, 3) => TypeName("u64vec3".into()),
+                (crate::PrimitiveTypeSingle::U64, 4) => TypeName("u64vec4".into()),
+
+                (crate::PrimitiveTypeSingle::I8, 2) => TypeName("i8vec2".into()),
+                (crate::PrimitiveTypeSingle::I8, 3) => TypeName("i8vec3".into()),
+                (crate::PrimitiveTypeSingle::I8, 4) => TypeName("i8vec4".into()),
+                (crate::PrimitiveTypeSingle::I16, 2) => TypeName("i16vec2".into()),
+                (crate::PrimitiveTypeSingle::I16, 3) => TypeName("i16vec3".into()),
+                (crate::PrimitiveTypeSingle::I16, 4) => TypeName("i16vec4".into()),
+                (crate::PrimitiveTypeSingle::I32, 2) => IVec2,
+                (crate::PrimitiveTypeSingle::I32, 3) => IVec3,
+                (crate::PrimitiveTypeSingle::I32, 4) => IVec4,
+                (crate::PrimitiveTypeSingle::I64, 2) => TypeName("i64vec2".into()),
+                (crate::PrimitiveTypeSingle::I64, 3) => TypeName("i64vec3".into()),
+                (crate::PrimitiveTypeSingle::I64, 4) => TypeName("i64vec4".into()),
+
+                (crate::PrimitiveTypeSingle::F16, 2) => TypeName("f16vec2".into()),
+                (crate::PrimitiveTypeSingle::F16, 3) => TypeName("f16vec3".into()),
+                (crate::PrimitiveTypeSingle::F16, 4) => TypeName("f16vec4".into()),
+                (crate::PrimitiveTypeSingle::F32, 2) => Vec2,
+                (crate::PrimitiveTypeSingle::F32, 3) => Vec3,
+                (crate::PrimitiveTypeSingle::F32, 4) => Vec4,
+                (crate::PrimitiveTypeSingle::F64, 2) => TypeName("f64vec2".into()),
+                (crate::PrimitiveTypeSingle::F64, 3) => TypeName("f64vec3".into()),
+                (crate::PrimitiveTypeSingle::F64, 4) => TypeName("f64vec4".into()),
+
+                (crate::PrimitiveTypeSingle::Bool, 2) => BVec2,
+                (crate::PrimitiveTypeSingle::Bool, 3) => BVec3,
+                (crate::PrimitiveTypeSingle::Bool, 4) => BVec4,
+                _ => panic!(),
+            },
+            crate::PrimitiveType::Mat { ty, rows, columns } => match (ty, rows, columns) {
+                (crate::PrimitiveTypeSingle::F16, 2, 2) => TypeName("f16mat2x2".into()),
+                (crate::PrimitiveTypeSingle::F16, 3, 3) => TypeName("f16mat3x3".into()),
+                (crate::PrimitiveTypeSingle::F16, 4, 4) => TypeName("f16mat4x4".into()),
+                (crate::PrimitiveTypeSingle::F32, 2, 2) => Mat2,
+                (crate::PrimitiveTypeSingle::F32, 3, 3) => Mat3,
+                (crate::PrimitiveTypeSingle::F32, 4, 4) => Mat4,
+                (crate::PrimitiveTypeSingle::F64, 2, 2) => TypeName("f64mat2x2".into()),
+                (crate::PrimitiveTypeSingle::F64, 3, 3) => TypeName("f64mat3x3".into()),
+                (crate::PrimitiveTypeSingle::F64, 4, 4) => TypeName("f64mat4x4".into()),
+                _ => panic!(),
+            },
+        }
     }
 }

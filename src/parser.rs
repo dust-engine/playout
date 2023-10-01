@@ -20,6 +20,12 @@ impl Parse for DescriptorType {
             }
             "SampledImage" => Self::SampledImage,
             "AccelerationStructure" => Self::AccelerationStructure,
+            "UniformBuffer" => {
+                let _left: syn::Token![<] = input.parse()?;
+                let path: syn::Path = input.parse()?;
+                let _right: syn::Token![>] = input.parse()?;
+                Self::UniformBuffer { path }
+            }
             _ => return Err(syn::Error::new(input.span(), "Invalid descriptor type")),
         };
         Ok(ty)
@@ -263,7 +269,9 @@ impl Parse for PlayoutModule {
                     module.descriptor_sets.push(set_layout);
                 } else {
                     let data_struct = input.parse::<DataStruct>()?;
-                    module.data_structs.push(data_struct);
+                    module
+                        .data_structs
+                        .insert(data_struct.ident.clone(), data_struct);
                 }
             }
         }
@@ -335,17 +343,17 @@ impl Parse for PrimitiveType {
                 length: 2,
             },
             "Mat4" => Self::Mat {
-                ty: PrimitiveTypeSingle::I32,
+                ty: PrimitiveTypeSingle::F32,
                 rows: 4,
                 columns: 4,
             },
             "Mat3" => Self::Mat {
-                ty: PrimitiveTypeSingle::I32,
+                ty: PrimitiveTypeSingle::F32,
                 rows: 3,
                 columns: 3,
             },
             "Mat2" => Self::Mat {
-                ty: PrimitiveTypeSingle::I32,
+                ty: PrimitiveTypeSingle::F32,
                 rows: 2,
                 columns: 2,
             },
