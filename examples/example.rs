@@ -4,16 +4,13 @@ fn main() {
     let playout_str = include_str!("./example.playout");
 
     match PlayoutModule::try_from(playout_str) {
-        Ok(set_layout) => {
+        Ok(module) => {
             let mut writer = String::new();
-            let declarations = set_layout.to_declarations();
-            for decl in declarations {
-                glsl::transpiler::glsl::show_declaration(&mut writer, &decl);
-            }
+            module.show(&mut writer);
             println!("{}", writer)
         }
         Err(e) => {
-            println!("Error: {}", e.to_string());
+            println!("Error: {} {}", e.to_string(), e.span().start().line);
         }
     }
 }

@@ -398,8 +398,13 @@ impl Parse for Type {
                 Ok(Type::Slice { ty: Box::new(ty) })
             }
         } else {
-            let ty: PrimitiveType = input.parse()?;
-            Ok(Type::Primitive(ty))
+            if let Ok(ty) = input.fork().parse::<PrimitiveType>() {
+                input.parse::<PrimitiveType>()?;
+                Ok(Type::Primitive(ty))
+            } else {
+                let path: syn::Path = input.parse()?;
+                Ok(Type::Path(path))
+            }
         }
     }
 }

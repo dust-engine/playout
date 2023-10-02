@@ -1,6 +1,7 @@
 use glsl::syntax::{ArrayedIdentifier, NonEmpty};
 
 use crate::PlayoutModule;
+use inflector::Inflector;
 
 impl crate::ImageFormat {
     pub fn to_layout_qualifier(&self) -> &'static str {
@@ -94,6 +95,19 @@ impl crate::Binding {
             }
         }
 
+        let array_specifier = if self.descriptor_count > 1 {
+            Some(glsl::syntax::ArraySpecifier {
+                dimensions: NonEmpty::from_non_empty_iter([
+                    glsl::syntax::ArraySpecifierDimension::ExplicitlySized(Box::new(
+                        glsl::syntax::Expr::UIntConst(self.descriptor_count),
+                    )),
+                ])
+                .unwrap(),
+            })
+        } else {
+            None
+        };
+
         let type_specifier = match &self.descriptor_type {
             crate::DescriptorType::Sampler => todo!(),
             crate::DescriptorType::StorageImage { format } => {
@@ -118,25 +132,16 @@ impl crate::Binding {
                     .get(&path.get_ident().unwrap().to_string())
                     .unwrap();
                 let fields = struct_def.fields.iter().map(|field| field.to_field());
-
-                glsl::syntax::TypeSpecifierNonArray::Struct(glsl::syntax::StructSpecifier {
-                    name: None,
-                    fields: NonEmpty::from_non_empty_iter(fields).unwrap(),
-                })
+                return glsl::syntax::Declaration::Block(glsl::syntax::Block {
+                    qualifier: type_qualifier,
+                    name: self.ident.to_pascal_case().into(),
+                    fields: fields.collect(),
+                    identifier: Some(glsl::syntax::ArrayedIdentifier {
+                        ident: self.ident.as_str().into(),
+                        array_spec: array_specifier,
+                    }),
+                });
             }
-        };
-
-        let array_specifier = if self.descriptor_count > 1 {
-            Some(glsl::syntax::ArraySpecifier {
-                dimensions: NonEmpty::from_non_empty_iter([
-                    glsl::syntax::ArraySpecifierDimension::ExplicitlySized(Box::new(
-                        glsl::syntax::Expr::UIntConst(self.descriptor_count),
-                    )),
-                ])
-                .unwrap(),
-            })
-        } else {
-            None
         };
 
         glsl::syntax::Declaration::InitDeclaratorList(glsl::syntax::InitDeclaratorList {
@@ -170,10 +175,21 @@ impl crate::SetLayout {
 }
 
 impl crate::PlayoutModule {
-    pub fn to_declarations(&self) -> impl Iterator<Item = glsl::syntax::Declaration> + '_ {
-        self.descriptor_sets
+    pub fn show(&self, writer: &mut impl std::fmt::Write) {
+        for struct_specifier in self
+            .data_structs
+            .iter()
+            .map(|(_, data_struct)| data_struct.to_struct_specifier())
+        {
+            glsl::transpiler::glsl::show_struct(writer, &struct_specifier);
+        }
+        for decl in self
+            .descriptor_sets
             .iter()
             .flat_map(|set| set.to_declarations(self))
+        {
+            glsl::transpiler::glsl::show_declaration(writer, &decl);
+        }
     }
 }
 
@@ -182,7 +198,12 @@ impl crate::Field {
         glsl::syntax::StructFieldSpecifier {
             qualifier: None,
             ty: glsl::syntax::TypeSpecifier {
-                ty: self.ty.primitive_type().unwrap().to_primitive_type(),
+                ty: match &self.ty {
+                    crate::Type::Path(path) => glsl::syntax::TypeSpecifierNonArray::TypeName(
+                        path.get_ident().unwrap().to_string().into(),
+                    ),
+                    _ => self.ty.primitive_type().unwrap().to_primitive_type(),
+                },
                 array_specifier: None,
             },
             identifiers: NonEmpty::from_non_empty_iter([glsl::syntax::ArrayedIdentifier {
@@ -197,6 +218,7 @@ impl crate::Field {
                         .unwrap(),
                     }),
                     crate::Type::Primitive(_) => None,
+                    crate::Type::Path(_) => None,
                     crate::Type::Slice { ty } => Some(glsl::syntax::ArraySpecifier {
                         dimensions: NonEmpty::from_non_empty_iter([
                             glsl::syntax::ArraySpecifierDimension::Unsized,
@@ -282,6 +304,17 @@ impl crate::PrimitiveType {
                 (crate::PrimitiveTypeSingle::F64, 4, 4) => TypeName("f64mat4x4".into()),
                 _ => panic!(),
             },
+        }
+    }
+}
+
+impl crate::DataStruct {
+    pub fn to_struct_specifier(&self) -> glsl::syntax::StructSpecifier {
+        let fields = self.fields.iter().map(|field| field.to_field());
+
+        glsl::syntax::StructSpecifier {
+            name: Some(self.ident.as_str().into()),
+            fields: NonEmpty::from_non_empty_iter(fields).unwrap(),
         }
     }
 }

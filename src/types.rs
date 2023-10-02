@@ -150,6 +150,7 @@ pub struct Field {
 pub enum Type {
     Array { ty: Box<Type>, size: usize },
     Primitive(PrimitiveType),
+    Path(Path),
     Slice { ty: Box<Type> },
     //Path, for nested structs
 }
@@ -166,6 +167,7 @@ impl Type {
                 Type::Primitive(ty) => Some(ty),
                 _ => None,
             },
+            Type::Path(_) => None,
         }
     }
 }
