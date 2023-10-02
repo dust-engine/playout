@@ -44,6 +44,17 @@ pub struct SetLayout {
     pub bindings: Vec<Binding>,
 }
 
+#[derive(Default)]
+pub struct PushConstantsLayout {
+    pub name: String,
+    pub fields: Vec<PushConstantField>,
+}
+
+pub struct PushConstantField {
+    pub field: Field,
+    pub stages: ShaderStages,
+}
+
 #[derive(Debug)]
 pub struct Binding {
     pub ident: String,
@@ -51,10 +62,6 @@ pub struct Binding {
     pub stages: ShaderStages,
     pub descriptor_type: DescriptorType,
     pub descriptor_count: u32, // ALso needs: binding id, immutable sampler, shader stage flags
-}
-
-pub struct PipelineLayout {
-    pub set_layouts: Vec<SetLayout>,
 }
 
 #[allow(non_camel_case_types)]

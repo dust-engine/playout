@@ -5,7 +5,7 @@ use syn::{
 
 use crate::{
     Binding, DataStruct, DescriptorType, Field, ImageFormat, PlayoutModule, PrimitiveType,
-    PrimitiveTypeSingle, SetLayout, ShaderStages, Type,
+    PrimitiveTypeSingle, PushConstantField, PushConstantsLayout, SetLayout, ShaderStages, Type,
 };
 
 impl Parse for DescriptorType {
@@ -187,6 +187,49 @@ impl Parse for Binding {
     }
 }
 
+impl Parse for PushConstantsLayout {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let _struct = input.parse::<syn::Token![struct]>()?;
+        let name = input.parse::<syn::Ident>()?;
+        let lookahead = input.lookahead1();
+        if !lookahead.peek(syn::token::Brace) {
+            return Err(lookahead.error());
+        }
+        let content;
+        let _paren: syn::token::Brace = syn::braced!(content in input);
+
+        let mut current_shader_stages = ShaderStages::empty();
+        let mut fields = Vec::new();
+        loop {
+            if content.peek(syn::Token![#]) && content.peek2(syn::Token![!]) {
+                current_shader_stages = parse_shader_stage_attribute(&content)?;
+                continue;
+            }
+            if content.is_empty() {
+                break;
+            }
+            if current_shader_stages.is_empty() {
+                return Err(syn::Error::new(
+                    content.span(),
+                    "No shader stages specified for this value",
+                ));
+            }
+            fields.push(PushConstantField {
+                field: content.parse()?,
+                stages: current_shader_stages,
+            });
+            if content.is_empty() {
+                break;
+            }
+            let _comma: syn::Token![,] = content.parse()?;
+        }
+        Ok(PushConstantsLayout {
+            fields,
+            name: name.to_string(),
+        })
+    }
+}
+
 impl Parse for SetLayout {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let _struct = input.parse::<syn::Token![struct]>()?;
@@ -250,20 +293,24 @@ impl Parse for PlayoutModule {
             }
 
             let mut is_descriptor_set = None;
+            let mut is_push_constants = false;
             if input.peek(syn::Token![#]) {
                 let _pound: syn::Token![#] = input.parse()?;
                 let content;
                 let _bracket: syn::token::Bracket = syn::bracketed!(content in input);
                 let ident = content.parse::<syn::Ident>()?;
-                if ident != "set" {
+                if ident == "set" {
+                    if content.peek(syn::Token![=]) {
+                        let _eq: syn::Token![=] = content.parse()?;
+                        current_set_id = content.parse::<syn::LitInt>()?.base10_parse()?;
+                    }
+                    is_descriptor_set = Some(current_set_id);
+                    current_set_id += 1;
+                } else if ident == "push_constants" {
+                    is_push_constants = true;
+                } else {
                     return Err(syn::Error::new(ident.span(), "unknown attribute"));
                 }
-                if content.peek(syn::Token![=]) {
-                    let _eq: syn::Token![=] = content.parse()?;
-                    current_set_id = content.parse::<syn::LitInt>()?.base10_parse()?;
-                }
-                is_descriptor_set = Some(current_set_id);
-                current_set_id += 1;
             }
             if input.is_empty() {
                 break;
@@ -273,6 +320,8 @@ impl Parse for PlayoutModule {
                     let mut set_layout = input.parse::<SetLayout>()?;
                     set_layout.set = set_id;
                     module.descriptor_sets.push(set_layout);
+                } else if is_push_constants {
+                    module.push_constants = input.parse()?;
                 } else {
                     let data_struct = input.parse::<DataStruct>()?;
                     module
@@ -432,17 +481,17 @@ impl Parse for DataStruct {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let _struct = input.parse::<syn::Token![struct]>()?;
         let name = input.parse::<syn::Ident>()?;
-        if input.peek(syn::token::Brace) {
-            let content;
-            let _paren: syn::token::Brace = syn::braced!(content in input);
-            let fields = content.parse_terminated(Field::parse, syn::Token![,])?;
-            Ok(Self {
-                ident: name.to_string(),
-                fields,
-            })
-        } else {
-            unimplemented!()
+        let lookahead = input.lookahead1();
+        if !lookahead.peek(syn::token::Brace) {
+            return Err(lookahead.error());
         }
+        let content;
+        let _paren: syn::token::Brace = syn::braced!(content in input);
+        let fields = content.parse_terminated(Field::parse, syn::Token![,])?;
+        Ok(Self {
+            ident: name.to_string(),
+            fields,
+        })
     }
 }
 

@@ -26,6 +26,13 @@ struct StandardLayout {
     acceleration_structure: AccelerationStructure,
 }
 
+#[push_constants]
+struct PushConstants {
+    #![stage(MISS | CLOSEST_HIT | RAYGEN)]
+    rand: u32,
+    frame_index: u32,
+}
+
 struct SurfelEntry {
     position: IVec3,
     direction: u32, // [0, 6) indicating one of the six faces of the cube

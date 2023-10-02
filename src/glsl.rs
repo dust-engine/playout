@@ -206,6 +206,7 @@ impl crate::PlayoutModule {
             .descriptor_sets
             .iter()
             .flat_map(|set| set.to_declarations(self))
+            .chain([self.push_constants.to_declaration()])
         {
             glsl::transpiler::glsl::show_declaration(writer, &decl);
         }
@@ -352,5 +353,48 @@ impl crate::DataStruct {
             name: Some(self.ident.as_str().into()),
             fields: NonEmpty::from_non_empty_iter(fields).unwrap(),
         }
+    }
+}
+
+impl crate::PushConstantsLayout {
+    pub fn to_declaration(&self) -> glsl::syntax::Declaration {
+        let layout_qualifier = glsl::syntax::LayoutQualifier {
+            ids: NonEmpty::from_non_empty_iter([glsl::syntax::LayoutQualifierSpec::Identifier(
+                "push_constant".into(),
+                None,
+            )])
+            .unwrap(),
+        };
+
+        let mut type_qualifier = glsl::syntax::TypeQualifier {
+            qualifiers: NonEmpty::from_non_empty_iter([glsl::syntax::TypeQualifierSpec::Layout(
+                layout_qualifier,
+            )])
+            .unwrap(),
+        };
+
+        type_qualifier
+            .qualifiers
+            .push(glsl::syntax::TypeQualifierSpec::Storage(
+                glsl::syntax::StorageQualifier::Uniform,
+            ));
+
+        glsl::syntax::Declaration::Block(glsl::syntax::Block {
+            qualifier: type_qualifier,
+            name: "PushConstants".into(),
+            fields: self
+                .fields
+                .iter()
+                .map(|field| field.field.to_field())
+                .collect(),
+            identifier: if self.fields.len() > 1 {
+                Some(glsl::syntax::ArrayedIdentifier {
+                    ident: "push_constants".into(),
+                    array_spec: None,
+                })
+            } else {
+                None
+            },
+        })
     }
 }
