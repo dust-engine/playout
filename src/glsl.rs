@@ -144,7 +144,7 @@ impl crate::Binding {
                         // Take that struct and flatten it out directly as a uniform/storage block.
                         let fields = module
                             .data_structs
-                            .get(&path.get_ident().unwrap().to_string())
+                            .get(path.as_str())
                             .unwrap()
                             .fields
                             .iter()
@@ -227,7 +227,7 @@ impl crate::Type {
             Array { ty, .. } => ty.base_type(),
             Slice { ty } => ty.base_type(),
             Path(path) => glsl::syntax::TypeSpecifierNonArray::TypeName(
-                path.get_ident().unwrap().to_string().into(),
+                path.clone().into(),
             ),
         }
     }
@@ -237,7 +237,7 @@ impl crate::Type {
             ty: glsl::syntax::TypeSpecifier {
                 ty: match self {
                     crate::Type::Path(path) => glsl::syntax::TypeSpecifierNonArray::TypeName(
-                        path.get_ident().unwrap().to_string().into(),
+                        path.clone().into(),
                     ),
                     _ => self.base_type(),
                 },

@@ -1,3 +1,4 @@
+#[cfg(feature = "parser")]
 pub mod parser;
 mod types;
 
@@ -5,6 +6,7 @@ use std::collections::HashMap;
 
 pub use types::*;
 
+#[cfg(feature = "glsl")]
 mod glsl;
 
 #[derive(Default)]

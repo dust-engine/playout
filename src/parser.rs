@@ -460,7 +460,7 @@ impl Parse for Type {
             Ok(Type::Primitive(ty))
         } else {
             let path: syn::Path = input.parse()?;
-            Ok(Type::Path(path))
+            Ok(Type::Path(path.get_ident().unwrap().to_string()))
         }
     }
 }
@@ -490,7 +490,7 @@ impl Parse for DataStruct {
         let fields = content.parse_terminated(Field::parse, syn::Token![,])?;
         Ok(Self {
             ident: name.to_string(),
-            fields,
+            fields: fields.into_iter().collect(),
         })
     }
 }

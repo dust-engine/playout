@@ -1,7 +1,5 @@
 use std::fmt::Debug;
 
-use syn::{punctuated::Punctuated, Path};
-
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy)]
     pub struct ShaderStages: u32 {
@@ -146,7 +144,7 @@ pub enum ImageFormatDataMode {
 
 pub struct DataStruct {
     pub ident: String,
-    pub fields: Punctuated<Field, syn::Token![,]>,
+    pub fields: Vec<Field>,
 }
 
 pub struct Field {
@@ -157,7 +155,7 @@ pub struct Field {
 pub enum Type {
     Array { ty: Box<Type>, size: usize },
     Primitive(PrimitiveType),
-    Path(Path),
+    Path(String),
     Slice { ty: Box<Type> },
     //Path, for nested structs
 }
