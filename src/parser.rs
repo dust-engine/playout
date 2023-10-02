@@ -22,9 +22,15 @@ impl Parse for DescriptorType {
             "AccelerationStructure" => Self::AccelerationStructure,
             "UniformBuffer" => {
                 let _left: syn::Token![<] = input.parse()?;
-                let path: syn::Path = input.parse()?;
+                let ty: Type = input.parse()?;
                 let _right: syn::Token![>] = input.parse()?;
-                Self::UniformBuffer { path }
+                Self::StorageBuffer { ty }
+            }
+            "StorageBuffer" => {
+                let _left: syn::Token![<] = input.parse()?;
+                let ty: Type = input.parse()?;
+                let _right: syn::Token![>] = input.parse()?;
+                Self::StorageBuffer { ty }
             }
             _ => return Err(syn::Error::new(input.span(), "Invalid descriptor type")),
         };
@@ -386,10 +392,13 @@ impl Parse for PrimitiveType {
 impl Parse for Type {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         if input.peek(syn::token::Bracket) {
-            let ty: Type = input.parse()?;
-            if input.peek(syn::Token![;]) {
-                let _semicolon: syn::Token![;] = input.parse()?;
-                let length = input.parse::<syn::LitInt>()?;
+            // Array-like
+            let content;
+            let _bracket = syn::bracketed!(content in input);
+            let ty: Type = content.parse()?;
+            if content.peek(syn::Token![;]) {
+                let _semicolon: syn::Token![;] = content.parse()?;
+                let length = content.parse::<syn::LitInt>()?;
                 Ok(Type::Array {
                     ty: Box::new(ty),
                     size: length.base10_parse()?,
@@ -397,14 +406,12 @@ impl Parse for Type {
             } else {
                 Ok(Type::Slice { ty: Box::new(ty) })
             }
+        } else if let Ok(ty) = input.fork().parse::<PrimitiveType>() {
+            input.parse::<PrimitiveType>()?;
+            Ok(Type::Primitive(ty))
         } else {
-            if let Ok(ty) = input.fork().parse::<PrimitiveType>() {
-                input.parse::<PrimitiveType>()?;
-                Ok(Type::Primitive(ty))
-            } else {
-                let path: syn::Path = input.parse()?;
-                Ok(Type::Path(path))
-            }
+            let path: syn::Path = input.parse()?;
+            Ok(Type::Path(path))
         }
     }
 }

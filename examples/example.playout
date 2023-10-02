@@ -17,11 +17,27 @@ struct StandardLayout {
     camera_last_frame: UniformBuffer<CameraSettings>,
     camera: UniformBuffer<CameraSettings>,
 
+    instances: StorageBuffer<[Mat4]>,
+    spatial_hash: StorageBuffer<[SpatialHashEntry]>,
+    surfel_pool: StorageBuffer<[SurfelEntry]>,
+
 
     #[binding = 14]
     acceleration_structure: AccelerationStructure,
 }
 
+struct SurfelEntry {
+    position: IVec3,
+    direction: u32, // [0, 6) indicating one of the six faces of the cube
+}
+
+struct SpatialHashEntry {
+    fingerprint: u32,
+    last_accessed_frame: u16,
+    sample_count: u16,
+    radiance: Vec3<f16>,
+    visual_importance: f16,
+}
 
 struct CameraSettings {
     view_proj: Mat4,
@@ -38,14 +54,6 @@ struct CameraSettings {
     _padding: f32,
 }
 
-struct ArHosekSkyModelConfiguration {
-    r: ArHosekSkyModelChannelConfiguration,
-    g: ArHosekSkyModelChannelConfiguration,
-    b: ArHosekSkyModelChannelConfiguration,
-    direction: Vec4, // normalized.
-    solar_intensity: Vec4, // w is solar radius
-}
-
 struct ArHosekSkyModelChannelConfiguration {
     configs0: Vec4,
     configs1: Vec4,
@@ -56,4 +64,12 @@ struct ArHosekSkyModelChannelConfiguration {
     ld_coefficient2: Vec4,
 }
 
+
+struct ArHosekSkyModelConfiguration {
+    r: ArHosekSkyModelChannelConfiguration,
+    g: ArHosekSkyModelChannelConfiguration,
+    b: ArHosekSkyModelChannelConfiguration,
+    direction: Vec4, // normalized.
+    solar_intensity: Vec4, // w is solar radius
+}
 

@@ -26,13 +26,13 @@ pub enum DescriptorType {
     Sampler,
     StorageImage { format: ImageFormat },
     SampledImage,
-    UniformBuffer { path: Path },
+    UniformBuffer { ty: Type },
+    StorageBuffer { ty: Type },
     AccelerationStructure,
 }
 
 impl Debug for DescriptorType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use DescriptorType::*;
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Ok(())
     }
 }
@@ -153,23 +153,6 @@ pub enum Type {
     Path(Path),
     Slice { ty: Box<Type> },
     //Path, for nested structs
-}
-
-impl Type {
-    pub fn primitive_type(&self) -> Option<&PrimitiveType> {
-        match self {
-            Type::Primitive(ty) => Some(ty),
-            Type::Array { ty, .. } => match ty.as_ref() {
-                Type::Primitive(ty) => Some(ty),
-                _ => None,
-            },
-            Type::Slice { ty } => match ty.as_ref() {
-                Type::Primitive(ty) => Some(ty),
-                _ => None,
-            },
-            Type::Path(_) => None,
-        }
-    }
 }
 
 pub enum PrimitiveTypeSingle {
