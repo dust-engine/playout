@@ -1,0 +1,24 @@
+[package]
+name = "playout_macro"
+version = "0.1.0"
+edition = "2021"
+
+
+[lib]
+proc-macro = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+proc-macro2 = "1"
+playout = { path = "../", default-features = false, features = ["parser"] }
+quote = "1"
+syn = { version = "2", default-features = false, features = ["full", "proc-macro", "printing"] }
+itertools = "0.11"
+
+[features]
+default = ["vulkan"]
+vulkan = []
+
+[dev-dependencies]
+ash = "0.37"

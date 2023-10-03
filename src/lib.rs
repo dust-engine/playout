@@ -1,3 +1,5 @@
+#![feature(alloc_layout_extra)]
+
 #[cfg(feature = "parser")]
 pub mod parser;
 mod types;

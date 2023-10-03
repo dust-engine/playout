@@ -226,9 +226,7 @@ impl crate::Type {
             Primitive(ty) => ty.to_type_specifier_non_array(),
             Array { ty, .. } => ty.base_type(),
             Slice { ty } => ty.base_type(),
-            Path(path) => glsl::syntax::TypeSpecifierNonArray::TypeName(
-                path.clone().into(),
-            ),
+            Path(path) => glsl::syntax::TypeSpecifierNonArray::TypeName(path.clone().into()),
         }
     }
     pub fn as_field(&self, ident: &str) -> glsl::syntax::StructFieldSpecifier {
@@ -236,9 +234,9 @@ impl crate::Type {
             qualifier: None,
             ty: glsl::syntax::TypeSpecifier {
                 ty: match self {
-                    crate::Type::Path(path) => glsl::syntax::TypeSpecifierNonArray::TypeName(
-                        path.clone().into(),
-                    ),
+                    crate::Type::Path(path) => {
+                        glsl::syntax::TypeSpecifierNonArray::TypeName(path.clone().into())
+                    }
                     _ => self.base_type(),
                 },
                 array_specifier: None,

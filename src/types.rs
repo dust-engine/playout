@@ -1,7 +1,9 @@
 use std::fmt::Debug;
 
+use crate::PlayoutModule;
+
 bitflags::bitflags! {
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct ShaderStages: u32 {
         const VERTEX = 0x1;
         const TELLESLATION_CONTROL = 0x2;
@@ -27,6 +29,12 @@ pub enum DescriptorType {
     UniformBuffer { ty: Type },
     StorageBuffer { ty: Type },
     AccelerationStructure,
+}
+
+impl DescriptorType {
+    pub fn same_type_as(&self, other: &Self) -> bool {
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
 }
 
 impl Debug for DescriptorType {
@@ -147,6 +155,19 @@ pub struct DataStruct {
     pub fields: Vec<Field>,
 }
 
+impl DataStruct {
+    pub fn layout(&self, module: &PlayoutModule) -> std::alloc::Layout {
+        let mut size = 0;
+        let mut align = 0;
+        for field in self.fields.iter() {
+            let layout = field.ty.layout(module);
+            size += layout.size();
+            align = align.max(layout.align());
+        }
+        std::alloc::Layout::from_size_align(size, align).unwrap()
+    }
+}
+
 pub struct Field {
     pub ident: Option<String>,
     pub ty: Type,
@@ -158,6 +179,20 @@ pub enum Type {
     Path(String),
     Slice { ty: Box<Type> },
     //Path, for nested structs
+}
+
+impl Type {
+    pub fn layout(&self, module: &PlayoutModule) -> std::alloc::Layout {
+        match self {
+            Type::Array { ty, size } => ty.layout(module).repeat(*size).unwrap().0,
+            Type::Primitive(ty) => ty.layout(),
+            Type::Path(path) => {
+                let data_struct = module.data_structs.get(path).unwrap();
+                data_struct.layout(module)
+            }
+            Type::Slice { .. } => panic!(),
+        }
+    }
 }
 
 pub enum PrimitiveTypeSingle {
@@ -174,6 +209,25 @@ pub enum PrimitiveTypeSingle {
     F64,
     Bool,
 }
+impl PrimitiveTypeSingle {
+    pub fn layout(&self) -> std::alloc::Layout {
+        use PrimitiveTypeSingle::*;
+        match self {
+            U8 => std::alloc::Layout::new::<u8>(),
+            U16 => std::alloc::Layout::new::<u16>(),
+            U32 => std::alloc::Layout::new::<u32>(),
+            U64 => std::alloc::Layout::new::<u64>(),
+            I8 => std::alloc::Layout::new::<i8>(),
+            I16 => std::alloc::Layout::new::<i16>(),
+            I32 => std::alloc::Layout::new::<i32>(),
+            I64 => std::alloc::Layout::new::<i64>(),
+            F16 => std::alloc::Layout::new::<u16>(),
+            F32 => std::alloc::Layout::new::<f32>(),
+            F64 => std::alloc::Layout::new::<f64>(),
+            Bool => std::alloc::Layout::new::<bool>(),
+        }
+    }
+}
 
 pub enum PrimitiveType {
     Single(PrimitiveTypeSingle),
@@ -186,4 +240,19 @@ pub enum PrimitiveType {
         rows: u8,
         columns: u8,
     },
+}
+impl PrimitiveType {
+    pub fn layout(&self) -> std::alloc::Layout {
+        match self {
+            PrimitiveType::Single(ty) => ty.layout(),
+            PrimitiveType::Vec { ty, length } => {
+                let layout = ty.layout();
+                layout.repeat(*length as usize).unwrap().0
+            }
+            PrimitiveType::Mat { ty, rows, columns } => {
+                let layout = ty.layout();
+                layout.repeat(*rows as usize * *columns as usize).unwrap().0
+            }
+        }
+    }
 }
