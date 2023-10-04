@@ -24,7 +24,7 @@ impl Parse for DescriptorType {
                 let _left: syn::Token![<] = input.parse()?;
                 let ty: Type = input.parse()?;
                 let _right: syn::Token![>] = input.parse()?;
-                Self::StorageBuffer { ty }
+                Self::UniformBuffer { ty }
             }
             "StorageBuffer" => {
                 let _left: syn::Token![<] = input.parse()?;

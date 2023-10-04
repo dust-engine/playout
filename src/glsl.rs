@@ -129,7 +129,7 @@ impl crate::Binding {
                     }
                 }
             }
-            crate::DescriptorType::SampledImage => glsl::syntax::TypeSpecifierNonArray::Sampler2D,
+            crate::DescriptorType::SampledImage => glsl::syntax::TypeSpecifierNonArray::TypeName("texture2D".into()),
             crate::DescriptorType::AccelerationStructure => {
                 glsl::syntax::TypeSpecifierNonArray::TypeName("accelerationStructureEXT".into())
             }
