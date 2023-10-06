@@ -115,20 +115,6 @@ impl Parse for ShaderStages {
     }
 }
 
-fn parse_binding_attribute(input: ParseStream) -> syn::Result<u32> {
-    let _pound: syn::Token![#] = input.parse()?;
-    let content;
-    let _bracket: syn::token::Bracket = syn::bracketed!(content in input);
-    let ident = content.parse::<syn::Ident>()?;
-    if ident == "binding" {
-        let _eq = content.parse::<syn::Token![=]>()?;
-        let binding_literal: syn::LitInt = content.parse::<syn::LitInt>()?;
-        binding_literal.base10_parse()
-    } else {
-        Err(syn::Error::new(ident.span(), "unknown attribute"))
-    }
-}
-
 fn parse_shader_stage_attribute(input: ParseStream) -> syn::Result<ShaderStages> {
     let _pound: syn::Token![#] = input.parse()?;
     let _bang: syn::Token![!] = input.parse()?;
@@ -149,11 +135,26 @@ fn parse_shader_stage_attribute(input: ParseStream) -> syn::Result<ShaderStages>
 impl Parse for Binding {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut binding: u32 = 0;
+        let mut layout: Option<String> = None;
         loop {
             if !input.peek(syn::Token![#]) {
                 break;
             }
-            binding = parse_binding_attribute(input)?;
+            let _pound: syn::Token![#] = input.parse()?;
+            let content;
+            let _bracket: syn::token::Bracket = syn::bracketed!(content in input);
+            let ident = content.parse::<syn::Ident>()?;
+            if ident == "binding" {
+                let _eq = content.parse::<syn::Token![=]>()?;
+                let binding_literal: syn::LitInt = content.parse::<syn::LitInt>()?;
+                binding = binding_literal.base10_parse()?;
+            } else if ident == "layout" {
+                let _eq = content.parse::<syn::Token![=]>()?;
+                let layout_ident: syn::Ident = content.parse::<syn::Ident>()?;
+                layout = Some(layout_ident.to_string());
+            } else {
+                return Err(syn::Error::new(ident.span(), "unknown attribute"))
+            }
         }
         let unnamed_field = input.peek(syn::Token![_]);
         let ident = if unnamed_field {
@@ -183,6 +184,7 @@ impl Parse for Binding {
             stages: ShaderStages::empty(),
             descriptor_type,
             descriptor_count,
+            layout,
         })
     }
 }

@@ -68,6 +68,7 @@ pub struct Binding {
     pub stages: ShaderStages,
     pub descriptor_type: DescriptorType,
     pub descriptor_count: u32, // ALso needs: binding id, immutable sampler, shader stage flags
+    pub layout: Option<String>,
 }
 
 #[allow(non_camel_case_types)]

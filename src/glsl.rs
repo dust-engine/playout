@@ -74,6 +74,15 @@ impl crate::Binding {
                 ));
         }
 
+        if let Some(layout) = &self.layout {
+            layout_qualifier
+                .ids
+                .push(glsl::syntax::LayoutQualifierSpec::Identifier(
+                    layout.clone().into(),
+                    None,
+                ));
+        }
+
         let mut type_qualifier = glsl::syntax::TypeQualifier {
             qualifiers: NonEmpty::from_non_empty_iter([glsl::syntax::TypeQualifierSpec::Layout(
                 layout_qualifier,
