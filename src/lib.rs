@@ -4,7 +4,7 @@
 pub mod parser;
 mod types;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub use types::*;
 
@@ -15,5 +15,5 @@ mod glsl;
 pub struct PlayoutModule {
     pub descriptor_sets: Vec<SetLayout>,
     pub push_constants: PushConstantsLayout,
-    pub data_structs: HashMap<String, DataStruct>,
+    pub data_structs: BTreeMap<String, DataStruct>,
 }

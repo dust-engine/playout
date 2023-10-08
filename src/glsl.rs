@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use glsl::syntax::NonEmpty;
 
 use crate::PlayoutModule;
@@ -208,7 +210,40 @@ impl crate::SetLayout {
 
 impl crate::PlayoutModule {
     pub fn show(&self, writer: &mut impl std::fmt::Write) {
-        for (_, data_struct) in self.data_structs.iter() {
+        let mut types_to_declare: Vec<String> = Vec::new();
+        let mut types_seen: BTreeSet<String> = BTreeSet::new();
+        for decl in self
+            .descriptor_sets
+            .iter() {
+            for binding in decl.bindings.iter() {
+                match &binding.descriptor_type {
+                    crate::DescriptorType::UniformBuffer { ty } |
+                    crate::DescriptorType::StorageBuffer { ty } => {
+                        if let Some(ty) = ty.base_nonprimitive_type() {
+                            if types_seen.insert(ty.clone()) {
+                                types_to_declare.push(ty.clone());
+                            }
+                        }
+                    },
+                    _ => ()
+                }
+            }
+        }
+
+        let mut queue: Vec<String> = types_to_declare.clone();
+        while let Some(next) = queue.pop() {
+            let data_struct = self.data_structs.get(&next).unwrap();
+            for field in data_struct.fields.iter() {
+                if let Some(ty) = field.ty.base_nonprimitive_type() {
+                    if types_seen.insert(ty.clone()) {
+                        types_to_declare.push(ty.clone());
+                        queue.push(ty.clone());
+                    }
+                }
+            }
+        }
+        for ty in types_to_declare.iter().rev() {
+            let data_struct = self.data_structs.get(ty).unwrap();
             glsl::transpiler::glsl::show_struct(writer, &data_struct.to_struct_specifier());
         }
         for decl in self
@@ -229,6 +264,15 @@ impl crate::Field {
 }
 
 impl crate::Type {
+    pub fn base_nonprimitive_type(&self) -> Option<&String> {
+        use crate::Type::*;
+        match self {
+            Primitive(ty) => None,
+            Array { ty, .. } => ty.base_nonprimitive_type(),
+            Slice { ty } => ty.base_nonprimitive_type(),
+            Path(path) => Some(path),
+        }
+    }
     pub fn base_type(&self) -> glsl::syntax::TypeSpecifierNonArray {
         use crate::Type::*;
         match self {
