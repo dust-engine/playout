@@ -27,6 +27,7 @@ pub enum DescriptorType {
     StorageImage { format: ImageFormat },
     SampledImage,
     UniformBuffer { ty: Type },
+    InlineUniformBlock { ty: Type },
     StorageBuffer { ty: Type },
     AccelerationStructure,
 }

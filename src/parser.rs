@@ -32,6 +32,12 @@ impl Parse for DescriptorType {
                 let _right: syn::Token![>] = input.parse()?;
                 Self::StorageBuffer { ty }
             }
+            "InlineUniformBlock" => {
+                let _left: syn::Token![<] = input.parse()?;
+                let ty: Type = input.parse()?;
+                let _right: syn::Token![>] = input.parse()?;
+                Self::InlineUniformBlock { ty }
+            }
             _ => return Err(syn::Error::new(input.span(), "Invalid descriptor type")),
         };
         Ok(ty)
@@ -153,7 +159,7 @@ impl Parse for Binding {
                 let layout_ident: syn::Ident = content.parse::<syn::Ident>()?;
                 layout = Some(layout_ident.to_string());
             } else {
-                return Err(syn::Error::new(ident.span(), "unknown attribute"))
+                return Err(syn::Error::new(ident.span(), "unknown attribute"));
             }
         }
         let unnamed_field = input.peek(syn::Token![_]);

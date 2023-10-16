@@ -33,19 +33,25 @@ pub fn push_constant_layout_to_vk(module: &PlayoutModule) -> TokenStream {
     ]}
 }
 
-pub fn set_layout_to_vk(layout: &SetLayout) -> TokenStream {
-    let bindings = layout.bindings.iter().map(binding_to_vk);
+pub fn set_layout_to_vk(module: &PlayoutModule, layout: &SetLayout) -> TokenStream {
+    let bindings = layout.bindings.iter().map(|binding| binding_to_vk(module, binding));
     quote! {[
         #(#bindings),*
     ]}
 }
 
 // VkDescriptorSetLayoutBinding
-fn binding_to_vk(binding: &Binding) -> TokenStream {
+fn binding_to_vk(module: &PlayoutModule, binding: &Binding) -> TokenStream {
     let binding_num = binding.binding;
-    let count_num = binding.descriptor_count;
+    let mut count_num = binding.descriptor_count;
     let descriptor_type = descriptor_type_to_vk(&binding.descriptor_type);
     let shader_stage_flags = stage_flag_to_vk(&binding.stages);
+
+    if let DescriptorType::InlineUniformBlock { ty } = &binding.descriptor_type {
+        let layout = ty.layout(module);
+        assert_eq!(count_num, 1);
+        count_num = layout.size() as u32;
+    }
     quote! {
         vk::DescriptorSetLayoutBinding {
             binding: #binding_num,
@@ -58,9 +64,20 @@ fn binding_to_vk(binding: &Binding) -> TokenStream {
 }
 
 fn stage_flag_to_vk(stage_flag: &ShaderStages) -> TokenStream {
-    let names = stage_flag
-        .iter_names()
-        .map(|a| syn::Ident::new(a.0, Span::call_site()));
+    let names = stage_flag.iter_names().map(|(str, flag)| {
+        if (ShaderStages::ANY_HIT
+            | ShaderStages::CLOSEST_HIT
+            | ShaderStages::RAYGEN
+            | ShaderStages::MISS
+            | ShaderStages::CALLABLE
+            | ShaderStages::INTERSECTION)
+            .contains(flag)
+        {
+            syn::Ident::new((str.to_string() + "_KHR").as_str(), Span::call_site())
+        } else {
+            syn::Ident::new(str, Span::call_site())
+        }
+    });
     quote! {
         #(vk::ShaderStageFlags::#names)|*
     }
@@ -79,6 +96,9 @@ pub(crate) fn descriptor_type_to_vk(descriptor_type: &DescriptorType) -> TokenSt
         },
         DescriptorType::UniformBuffer { .. } => quote! {
             vk::DescriptorType::UNIFORM_BUFFER
+        },
+        DescriptorType::InlineUniformBlock { .. } => quote! {
+            vk::DescriptorType::INLINE_UNIFORM_BLOCK
         },
         DescriptorType::StorageBuffer { .. } => quote! {
             vk::DescriptorType::STORAGE_BUFFER

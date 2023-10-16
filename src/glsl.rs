@@ -97,7 +97,8 @@ impl crate::Binding {
             crate::DescriptorType::StorageImage { .. }
             | crate::DescriptorType::SampledImage
             | crate::DescriptorType::AccelerationStructure
-            | crate::DescriptorType::UniformBuffer { .. } => {
+            | crate::DescriptorType::UniformBuffer { .. }
+            | crate::DescriptorType::InlineUniformBlock { .. } => {
                 type_qualifier
                     .qualifiers
                     .push(glsl::syntax::TypeQualifierSpec::Storage(
@@ -140,12 +141,15 @@ impl crate::Binding {
                     }
                 }
             }
-            crate::DescriptorType::SampledImage => glsl::syntax::TypeSpecifierNonArray::TypeName("texture2D".into()),
+            crate::DescriptorType::SampledImage => {
+                glsl::syntax::TypeSpecifierNonArray::TypeName("texture2D".into())
+            }
             crate::DescriptorType::AccelerationStructure => {
                 glsl::syntax::TypeSpecifierNonArray::TypeName("accelerationStructureEXT".into())
             }
             crate::DescriptorType::UniformBuffer { ty }
-            | crate::DescriptorType::StorageBuffer { ty } => {
+            | crate::DescriptorType::StorageBuffer { ty }
+            | crate::DescriptorType::InlineUniformBlock { ty } => {
                 let (fields, identifier): (
                     Vec<glsl::syntax::StructFieldSpecifier>,
                     Option<glsl::syntax::ArrayedIdentifier>,
@@ -212,20 +216,18 @@ impl crate::PlayoutModule {
     pub fn show(&self, writer: &mut impl std::fmt::Write) {
         let mut types_to_declare: Vec<String> = Vec::new();
         let mut types_seen: BTreeSet<String> = BTreeSet::new();
-        for decl in self
-            .descriptor_sets
-            .iter() {
+        for decl in self.descriptor_sets.iter() {
             for binding in decl.bindings.iter() {
                 match &binding.descriptor_type {
-                    crate::DescriptorType::UniformBuffer { ty } |
-                    crate::DescriptorType::StorageBuffer { ty } => {
+                    crate::DescriptorType::UniformBuffer { ty }
+                    | crate::DescriptorType::StorageBuffer { ty } => {
                         if let Some(ty) = ty.base_nonprimitive_type() {
                             if types_seen.insert(ty.clone()) {
                                 types_to_declare.push(ty.clone());
                             }
                         }
-                    },
-                    _ => ()
+                    }
+                    _ => (),
                 }
             }
         }

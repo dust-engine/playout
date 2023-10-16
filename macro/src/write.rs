@@ -242,6 +242,7 @@ impl DescriptorSetWriteUpdate {
                         }
                     }
                     playout::DescriptorType::UniformBuffer { ty: _ }
+                    | playout::DescriptorType::InlineUniformBlock { ty: _ }
                     | playout::DescriptorType::StorageBuffer { ty: _ } => {
                         let index = ctx.buffer_info.len();
                         ctx.buffer_info.extend(descs);

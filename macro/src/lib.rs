@@ -1,4 +1,5 @@
 #![feature(proc_macro_span)]
+#![feature(alloc_layout_extra)]
 
 #[cfg(feature = "vulkan")]
 mod vk;
@@ -87,7 +88,7 @@ pub fn layout(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             }
             .into();
         };
-        vk::set_layout_to_vk(set).into()
+        vk::set_layout_to_vk(&module, set).into()
     } else {
         vk::push_constant_layout_to_vk(&module).into()
     }
