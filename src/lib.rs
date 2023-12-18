@@ -17,3 +17,5 @@ pub struct PlayoutModule {
     pub push_constants: PushConstantsLayout,
     pub data_structs: BTreeMap<String, DataStruct>,
 }
+
+pub use syn::Error;
