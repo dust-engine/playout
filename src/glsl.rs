@@ -252,8 +252,12 @@ impl crate::PlayoutModule {
             .descriptor_sets
             .iter()
             .flat_map(|set| set.to_declarations(self))
-            .chain([self.push_constants.to_declaration()])
         {
+            glsl::transpiler::glsl::show_declaration(writer, &decl);
+        }
+
+        if !self.push_constants.fields.is_empty() {
+            let decl = self.push_constants.to_declaration();
             glsl::transpiler::glsl::show_declaration(writer, &decl);
         }
     }

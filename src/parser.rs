@@ -468,7 +468,7 @@ impl Parse for Type {
             Ok(Type::Primitive(ty))
         } else {
             let path: syn::Path = input.parse()?;
-            Ok(Type::Path(path.get_ident().unwrap().to_string()))
+            Ok(Type::Path(path.require_ident()?.to_string()))
         }
     }
 }

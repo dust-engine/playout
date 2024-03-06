@@ -72,14 +72,13 @@ pub fn layout(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let module = match PlayoutModule::try_from(file.as_str()) {
         Ok(module) => module,
         Err(err) => {
-            let message = err.to_string();
+            let message = err.to_compile_error();
             return quote! {
-                compile_error!(#message)
+                #message
             }
             .into();
         }
     };
-
     if let Some(set_id) = set_id {
         let Some(set) = module.descriptor_sets.iter().find(|set| set.set == set_id) else {
             let missing_id = format!("Set id {set_id} does not exist within this playout file");
