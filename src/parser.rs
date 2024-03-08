@@ -19,6 +19,7 @@ impl Parse for DescriptorType {
                 Self::StorageImage { format }
             }
             "SampledImage" => Self::SampledImage,
+            "CombinedImageSampler" => Self::CombinedImageSampler,
             "AccelerationStructure" => Self::AccelerationStructure,
             "UniformBuffer" => {
                 let _left: syn::Token![<] = input.parse()?;

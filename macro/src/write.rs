@@ -233,6 +233,7 @@ impl DescriptorSetWriteUpdate {
                 let descriptor_type = crate::vk::descriptor_type_to_vk(&binding.descriptor_type);
                 let ptr_quote = match &binding.descriptor_type {
                     playout::DescriptorType::Sampler
+                    | playout::DescriptorType::CombinedImageSampler
                     | playout::DescriptorType::StorageImage { .. }
                     | playout::DescriptorType::SampledImage => {
                         let index = ctx.img_info.len();

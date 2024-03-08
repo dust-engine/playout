@@ -58,7 +58,13 @@ pub fn layout(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     }
     let path = token.to_string();
     let path = path.strip_prefix('"').unwrap().strip_suffix('"').unwrap();
-    let path = token.span().source_file().path().parent().unwrap().join(path);
+    let path = token
+        .span()
+        .source_file()
+        .path()
+        .parent()
+        .unwrap()
+        .join(path);
     let file = match std::fs::read_to_string(path) {
         Ok(file) => file,
         Err(err) => {

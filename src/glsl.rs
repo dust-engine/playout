@@ -96,6 +96,7 @@ impl crate::Binding {
             crate::DescriptorType::Sampler => todo!(),
             crate::DescriptorType::StorageImage { .. }
             | crate::DescriptorType::SampledImage
+            | crate::DescriptorType::CombinedImageSampler
             | crate::DescriptorType::AccelerationStructure
             | crate::DescriptorType::UniformBuffer { .. }
             | crate::DescriptorType::InlineUniformBlock { .. } => {
@@ -143,6 +144,9 @@ impl crate::Binding {
             }
             crate::DescriptorType::SampledImage => {
                 glsl::syntax::TypeSpecifierNonArray::TypeName("texture2D".into())
+            }
+            crate::DescriptorType::CombinedImageSampler => {
+                glsl::syntax::TypeSpecifierNonArray::TypeName("sampler2D".into())
             }
             crate::DescriptorType::AccelerationStructure => {
                 glsl::syntax::TypeSpecifierNonArray::TypeName("accelerationStructureEXT".into())

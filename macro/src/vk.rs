@@ -34,7 +34,10 @@ pub fn push_constant_layout_to_vk(module: &PlayoutModule) -> TokenStream {
 }
 
 pub fn set_layout_to_vk(module: &PlayoutModule, layout: &SetLayout) -> TokenStream {
-    let bindings = layout.bindings.iter().map(|binding| binding_to_vk(module, binding));
+    let bindings = layout
+        .bindings
+        .iter()
+        .map(|binding| binding_to_vk(module, binding));
     quote! {[
         #(#bindings),*
     ]}
@@ -87,6 +90,9 @@ pub(crate) fn descriptor_type_to_vk(descriptor_type: &DescriptorType) -> TokenSt
     match descriptor_type {
         DescriptorType::Sampler => quote! {
             vk::DescriptorType::SAMPLER
+        },
+        DescriptorType::CombinedImageSampler => quote! {
+            vk::DescriptorType::COMBINED_IMAGE_SAMPLER
         },
         DescriptorType::StorageImage { .. } => quote! {
             vk::DescriptorType::STORAGE_IMAGE

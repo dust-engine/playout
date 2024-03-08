@@ -26,6 +26,7 @@ pub enum DescriptorType {
     Sampler,
     StorageImage { format: ImageFormat },
     SampledImage,
+    CombinedImageSampler,
     UniformBuffer { ty: Type },
     InlineUniformBlock { ty: Type },
     StorageBuffer { ty: Type },
