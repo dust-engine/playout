@@ -86,7 +86,7 @@ pub enum ImageFormat {
 
     RGBA16_UNorm,
     RGB10A2_UNorm,
-    RBGA8_UNorm,
+    RGBA8_UNorm,
     RG16_UNorm,
     RG8_UNorm,
     R16_UNorm,
@@ -128,7 +128,7 @@ impl ImageFormat {
             RGBA32_Float | RGBA16_Float | RG32_Float | RG16_Float | R11G11B10_Float | R32_Float
             | R16_Float => ImageFormatDataMode::Float,
 
-            RGBA16_UNorm | RGB10A2_UNorm | RBGA8_UNorm | RG16_UNorm | RG8_UNorm | R16_UNorm
+            RGBA16_UNorm | RGB10A2_UNorm | RGBA8_UNorm | RG16_UNorm | RG8_UNorm | R16_UNorm
             | R8_UNorm => ImageFormatDataMode::UNorm,
 
             RGBA16_SNorm | RBGA8_SNorm | RG16_SNorm | RG8_SNorm | R16_SNorm | R8_SNorm => {

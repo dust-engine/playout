@@ -17,7 +17,7 @@ impl crate::ImageFormat {
             crate::ImageFormat::R16_Float => "r16f",
             crate::ImageFormat::RGBA16_UNorm => "rgba16",
             crate::ImageFormat::RGB10A2_UNorm => "rgb10_a2",
-            crate::ImageFormat::RBGA8_UNorm => "rgba8",
+            crate::ImageFormat::RGBA8_UNorm => "rgba8",
             crate::ImageFormat::RG16_UNorm => "rg16",
             crate::ImageFormat::RG8_UNorm => "rg8",
             crate::ImageFormat::R16_UNorm => "r16",

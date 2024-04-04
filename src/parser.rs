@@ -58,7 +58,7 @@ impl Parse for ImageFormat {
             "R16_Float" => Self::R16_Float,
             "RGBA16_UNorm" => Self::RGBA16_UNorm,
             "RGB10A2_UNorm" => Self::RGB10A2_UNorm,
-            "RBGA8_UNorm" => Self::RBGA8_UNorm,
+            "RGBA8_UNorm" => Self::RGBA8_UNorm,
             "RG16_UNorm" => Self::RG16_UNorm,
             "RG8_UNorm" => Self::RG8_UNorm,
             "R16_UNorm" => Self::R16_UNorm,
