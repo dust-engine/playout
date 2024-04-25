@@ -62,6 +62,7 @@ fn binding_to_vk(module: &PlayoutModule, binding: &Binding) -> TokenStream {
             descriptor_count: #count_num,
             stage_flags: #shader_stage_flags,
             p_immutable_samplers: ::std::ptr::null(),
+            _marker: ::std::marker::PhantomData,
         }
     }
 }

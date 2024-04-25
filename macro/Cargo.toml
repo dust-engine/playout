@@ -14,11 +14,11 @@ proc-macro2 = "1"
 playout = { path = "../", default-features = false, features = ["parser"] }
 quote = "1"
 syn = { version = "2", default-features = false, features = ["full", "proc-macro", "printing"] }
-itertools = "0.11"
+itertools = "0.12"
 
 [features]
 default = ["vulkan"]
 vulkan = []
 
 [dev-dependencies]
-ash = "0.37"
+ash = "0.38"
