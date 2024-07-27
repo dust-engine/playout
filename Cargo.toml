@@ -2,6 +2,10 @@
 name = "playout"
 version = "0.1.0"
 edition = "2021"
+description = "DSL for creating Vulkan pipeline layout and descriptor set layout."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/dust-engine/playout"
+documentation = "https://docs.rs/playout"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,6 +19,10 @@ Inflector = { version = "0.11", default-features = false, optional = true }
 [features]
 default = ["parser", "glsl"]
 parser = ["syn", "proc-macro2", "Inflector"]
+
+[dev-dependencies]
+playout_macro = { path = "macro" }
+ash = "0.38"
 
 [workspace]
 members = [

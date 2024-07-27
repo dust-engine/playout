@@ -277,7 +277,7 @@ impl crate::Type {
     pub fn base_nonprimitive_type(&self) -> Option<&String> {
         use crate::Type::*;
         match self {
-            Primitive(ty) => None,
+            Primitive(_) => None,
             Array { ty, .. } => ty.base_nonprimitive_type(),
             Slice { ty } => ty.base_nonprimitive_type(),
             Path(path) => Some(path),

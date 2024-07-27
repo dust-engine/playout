@@ -12,5 +12,9 @@ fn main() {
         Err(e) => {
             println!("Error: {} {}", e.to_string(), e.span().start().line);
         }
-    }
+    };
+
+    use ash::vk;
+    let out = playout_macro::layout!("./example.playout", 3);
+    println!("{:#?}", out);
 }
