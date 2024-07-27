@@ -2,7 +2,10 @@
 name = "playout_macro"
 version = "0.1.0"
 edition = "2021"
-
+description = "DSL for creating Vulkan pipeline layout and descriptor set layout."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/dust-engine/playout/tree/master/macro"
+documentation = "https://docs.rs/playout_macro"
 
 [lib]
 proc-macro = true
@@ -11,7 +14,7 @@ proc-macro = true
 
 [dependencies]
 proc-macro2 = "1"
-playout = { path = "../", default-features = false, features = ["parser"] }
+playout = { version = "0.1.0", path = "../", default-features = false, features = ["parser"] }
 quote = "1"
 syn = { version = "2", default-features = false, features = ["full", "proc-macro", "printing"] }
 itertools = "0.12"
